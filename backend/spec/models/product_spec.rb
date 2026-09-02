@@ -207,4 +207,63 @@ RSpec.describe Product, type: :model do
       expect(product.active).to eq(true)
     end
   end
+
+  describe ".search_by_name" do
+    it "returns products with a partial name match" do
+      matching = Product.create!(valid_attributes.merge(name: "Wireless Mouse", sku: "SEARCH-1"))
+      Product.create!(valid_attributes.merge(name: "USB Keyboard", sku: "SEARCH-2"))
+
+      expect(Product.search_by_name("Wire")).to contain_exactly(matching)
+    end
+
+    it "matches names case-insensitively" do
+      matching = Product.create!(valid_attributes.merge(name: "Wireless Mouse", sku: "SEARCH-3"))
+
+      expect(Product.search_by_name("MOUSE")).to contain_exactly(matching)
+    end
+
+    it "excludes products that do not match" do
+      Product.create!(valid_attributes.merge(name: "Wireless Mouse", sku: "SEARCH-4"))
+
+      expect(Product.search_by_name("Keyboard")).to be_empty
+    end
+
+    it "does not restrict results when the search term is blank" do
+      first = Product.create!(valid_attributes.merge(sku: "SEARCH-5"))
+      second = Product.create!(valid_attributes.merge(name: "Another Product", sku: "SEARCH-6"))
+
+      expect(Product.search_by_name("")).to contain_exactly(first, second)
+      expect(Product.search_by_name(nil)).to contain_exactly(first, second)
+    end
+
+    it "treats LIKE wildcard characters as literal search text" do
+      literal = Product.create!(valid_attributes.merge(name: "100% Cotton Shirt", sku: "SEARCH-7"))
+      Product.create!(valid_attributes.merge(name: "Cotton Shirt", sku: "SEARCH-8"))
+
+      expect(Product.search_by_name("%")).to contain_exactly(literal)
+    end
+  end
+
+  describe ".filter_by_active" do
+    it "returns only active products when true" do
+      active = Product.create!(valid_attributes.merge(sku: "ACTIVE-1", active: true))
+      Product.create!(valid_attributes.merge(name: "Inactive Product", sku: "ACTIVE-2", active: false))
+
+      expect(Product.filter_by_active(true)).to contain_exactly(active)
+    end
+
+    it "returns only inactive products when false" do
+      Product.create!(valid_attributes.merge(sku: "ACTIVE-3", active: true))
+      inactive = Product.create!(valid_attributes.merge(name: "Inactive Product", sku: "ACTIVE-4", active: false))
+
+      expect(Product.filter_by_active(false)).to contain_exactly(inactive)
+    end
+
+    it "returns all products when nil" do
+      active = Product.create!(valid_attributes.merge(sku: "ACTIVE-5", active: true))
+      inactive = Product.create!(valid_attributes.merge(name: "Inactive Product", sku: "ACTIVE-6", active: false))
+
+      expect(Product.filter_by_active(nil)).to contain_exactly(active, inactive)
+    end
+  end
 end
