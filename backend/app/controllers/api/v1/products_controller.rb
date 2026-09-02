@@ -43,7 +43,7 @@ module Api
         if product.save
           render json: { data: product_json(product) }, status: :created
         else
-          render json: { errors: product.errors.to_hash }, status: :unprocessable_entity
+          render json: { errors: product.errors.to_hash }, status: :unprocessable_content
         end
       end
 
@@ -51,7 +51,7 @@ module Api
         if @product.update(product_params)
           render json: { data: product_json(@product) }
         else
-          render json: { errors: @product.errors.to_hash }, status: :unprocessable_entity
+          render json: { errors: @product.errors.to_hash }, status: :unprocessable_content
         end
       end
 

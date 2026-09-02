@@ -330,7 +330,7 @@ RSpec.describe "Api::V1::Products", type: :request do
         post "/api/v1/products", params: { product: valid_product_payload(name: "AB", sku: "SKU-INVALID") }, as: :json
       end.not_to change(Product, :count)
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(json["errors"]).to include("name")
       expect(json["errors"]["name"]).to be_present
     end
@@ -379,7 +379,7 @@ RSpec.describe "Api::V1::Products", type: :request do
           params: { product: valid_product_payload(name: "AB", sku: "SKU-UPDATE-422") },
           as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(json["errors"]).to include("name")
       expect(product.reload.name).to eq(original_name)
     end
