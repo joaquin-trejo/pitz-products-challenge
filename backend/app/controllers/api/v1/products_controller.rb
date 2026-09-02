@@ -5,6 +5,8 @@ module Api
 
       wrap_parameters false
 
+      before_action :set_product, only: %i[show update destroy]
+
       rescue_from ActiveRecord::RecordNotFound, with: :product_not_found
 
       def index
@@ -32,9 +34,7 @@ module Api
       end
 
       def show
-        product = Product.find(params[:id])
-
-        render json: { data: product_json(product) }
+        render json: { data: product_json(@product) }
       end
 
       def create
@@ -48,26 +48,36 @@ module Api
       end
 
       def update
-        product = Product.find(params[:id])
-
-        if product.update(product_params)
-          render json: { data: product_json(product) }
+        if @product.update(product_params)
+          render json: { data: product_json(@product) }
         else
-          render json: { errors: product.errors.to_hash }, status: :unprocessable_entity
+          render json: { errors: @product.errors.to_hash }, status: :unprocessable_entity
         end
       end
 
       def destroy
-        product = Product.find(params[:id])
-        product.destroy!
+        @product.destroy!
 
         head :no_content
       end
 
       private
 
+      def set_product
+        @product = Product.find(params[:id])
+      end
+
       def product_params
-        params.require(:product).permit(:name, :description, :price, :stock, :sku, :active)
+        params.expect(
+          product: %i[
+            name
+            description
+            price
+            stock
+            sku
+            active
+          ]
+        )
       end
 
       def parse_page_param

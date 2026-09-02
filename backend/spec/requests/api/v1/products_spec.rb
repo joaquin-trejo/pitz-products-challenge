@@ -341,6 +341,13 @@ RSpec.describe "Api::V1::Products", type: :request do
       expect(response).to have_http_status(:bad_request)
       expect(json).to eq(bad_request_error)
     end
+
+    it "returns 400 when the Product wrapper shape is invalid" do
+      post "/api/v1/products", params: { product: "invalid" }, as: :json
+
+      expect(response).to have_http_status(:bad_request)
+      expect(json).to eq(bad_request_error)
+    end
   end
 
   describe "PUT /api/v1/products/:id" do
