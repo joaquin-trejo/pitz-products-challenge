@@ -17,4 +17,17 @@ class Product < ApplicationRecord
                   format: { with: SKU_FORMAT }
 
   validates :active, inclusion: { in: [ true, false ] }
+
+  scope :search_by_name, ->(term) {
+    return all if term.blank?
+
+    sanitized = ActiveRecord::Base.sanitize_sql_like(term.to_s.strip)
+    where("name ILIKE ?", "%#{sanitized}%")
+  }
+
+  scope :filter_by_active, ->(value) {
+    return all if value.nil?
+
+    where(active: value)
+  }
 end

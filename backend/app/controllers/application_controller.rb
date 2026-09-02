@@ -4,6 +4,7 @@ class ApplicationController < ActionController::API
   end
 
   rescue_from ActionController::ParameterMissing, with: :bad_request
+  rescue_from ActionController::BadRequest, with: :bad_request
 
   private
 
