@@ -1,16 +1,10 @@
-import { Box, Container, Typography } from '@mui/material'
+import { Box } from '@mui/material'
+import { ProductsPage } from '../features/products/components/ProductsPage'
 
 export function App() {
   return (
     <Box component="main" sx={{ minHeight: '100vh', py: 4 }}>
-      <Container maxWidth="lg">
-        <Typography component="h1" variant="h1">
-          PITZ Products
-        </Typography>
-        <Typography color="text.secondary" sx={{ mt: 1 }}>
-          Frontend foundation is ready.
-        </Typography>
-      </Container>
+      <ProductsPage />
     </Box>
   )
 }

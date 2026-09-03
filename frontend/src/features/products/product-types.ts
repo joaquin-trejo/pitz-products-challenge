@@ -41,6 +41,8 @@ export type ProductsListParams = {
   active?: boolean
 }
 
+export type ProductStatusFilter = 'all' | 'active' | 'inactive'
+
 export type ApiValidationErrors = {
   errors: Record<string, string[]>
 }
