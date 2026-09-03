@@ -17,6 +17,7 @@ COPY --from=build /app/dist ./dist
 
 EXPOSE 8080
 
-# Railway injects $PORT. `serve` expects the listen argument to include a scheme.
-CMD sh -c "serve -s dist -l http://0.0.0.0:${PORT:-8080}"
+# Railway injects $PORT. `serve` expects the listen argument to include a supported scheme.
+# `tcp://` works reliably in container environments.
+CMD sh -c "serve -s dist -l tcp://0.0.0.0:${PORT:-8080}"
 
