@@ -18,6 +18,16 @@ over a versioned REST API.
 - Desktop table and mobile/tablet card layouts
 - Success and error feedback for mutations
 
+## Live Demo
+
+| Surface | URL |
+|---------|-----|
+| Frontend | https://amiable-victory-production-9f5e.up.railway.app |
+| Backend API | https://pitz-products-challenge-production.up.railway.app |
+| API Documentation (Swagger UI) | https://pitz-products-challenge-production.up.railway.app/api-docs |
+
+Health check (Rails): `GET /up` on the backend service.
+
 ## Tech Stack
 
 ### Backend
@@ -26,6 +36,7 @@ over a versioned REST API.
 - Ruby on Rails 8.1 (API-only)
 - PostgreSQL
 - RSpec
+- rswag (OpenAPI / Swagger UI)
 - rack-cors
 - RuboCop (rails-omakase)
 - bundler-audit
@@ -55,6 +66,37 @@ over a versioned REST API.
 Backend and frontend are independently runnable and communicate over HTTP/JSON.
 There is no nested Git repository inside either app.
 
+## Production Architecture
+
+Production is a **decoupled frontend/backend deployment** on Railway (not a
+microservices system). Three Railway services collaborate:
+
+```text
+Browser
+   |
+   v
+React / Vite (Railway)
+   |
+   | HTTPS / JSON
+   v
+Rails API (Railway)
+   |
+   | Active Record
+   v
+PostgreSQL (Railway)
+```
+
+- The React + TypeScript + Vite SPA is an independent Railway service.
+- The Rails API is a separate Railway service.
+- PostgreSQL is hosted as a Railway database service.
+- The browser calls the Rails API over HTTPS using the configured API base URL.
+- Rails connects to PostgreSQL through `DATABASE_URL`.
+- CORS allows only the configured frontend origin (`FRONTEND_ORIGIN`).
+
+Service names, networking, and most runtime settings are configured in the
+Railway dashboard. Repository-backed deployment artifacts are documented under
+[Deployment](#deployment).
+
 ## Prerequisites
 
 - Ruby **3.4.10** (see `backend/.ruby-version`)
@@ -70,7 +112,7 @@ A global Rails install is not required; use `bundle exec` / `bin/rails` after
 ## Environment Variables
 
 Example files are provided for documentation. Real local env files are not
-committed.
+committed. Document **names only** — never commit or paste secret values.
 
 ### Backend (`backend/.env.example`)
 
@@ -113,7 +155,28 @@ cd frontend
 cp .env.example .env
 ```
 
-Rails `config/master.key` is gitignored and must never be committed. Encrypted
+### Production environment variables
+
+**Frontend (Railway build)**
+
+| Variable | Purpose |
+|----------|---------|
+| `VITE_API_BASE_URL` | Public HTTPS URL of the deployed Rails API |
+
+Vite embeds `VITE_*` values into the client bundle at **build time**. Provide
+this variable during the Docker/Railway image build. It must not contain secrets.
+
+**Backend (Railway runtime)**
+
+| Variable | Purpose |
+|----------|---------|
+| `FRONTEND_ORIGIN` | Explicit allowed frontend origin for CORS |
+| `DATABASE_URL` | PostgreSQL connection string provided by Railway |
+| `RAILS_MASTER_KEY` | Decrypts Rails encrypted credentials when applicable |
+| `RAILS_ENV` | Set to `production` |
+
+`DATABASE_URL` and `RAILS_MASTER_KEY` are secrets. Never commit them or publish
+their values. Rails `config/master.key` is gitignored. Encrypted
 `config/credentials.yml.enc` may remain in version control.
 
 ## Setup
@@ -347,7 +410,8 @@ cd backend
 bundle exec rspec
 ```
 
-Current suite size: **70 examples, 0 failures**.
+Current suite size: **82 examples, 0 failures**
+(model + request behavioral specs, plus OpenAPI contract examples via rswag).
 
 ### Frontend
 
@@ -458,6 +522,10 @@ avoid duplicate accessible content.
 for search/filter, and request specs covering all Product endpoints,
 pagination/search/filter combinations, and error statuses.
 
+**OpenAPI contract:** separate rswag integration specs generate and exercise
+the published OpenAPI document. They complement—not replace—the behavioral
+request specs.
+
 **Frontend:** unit tests for the Fetch client, plus component/integration
 tests for list, create/edit, and delete flows. MSW intercepts real HTTP
 at the network boundary. TanStack Query and React Hook Form internals are
@@ -465,12 +533,18 @@ not mocked.
 
 There is no browser E2E automation suite in this repository.
 
-## API Documentation (Swagger/OpenAPI)
+## API Documentation
 
-This project includes OpenAPI documentation for the Rails API using rswag.
+OpenAPI documentation is maintained with **rswag**:
 
-- Swagger UI: `http://localhost:3000/api-docs`
-- Generated spec file: `backend/swagger/v1/swagger.yaml`
+- Swagger UI is mounted at `/api-docs`
+- Spec endpoint: `/api-docs/v1/swagger.yaml`
+- Checked-in generated file: `backend/swagger/v1/swagger.yaml`
+- Contract source: `backend/spec/integration/api/v1/products_spec.rb`
+
+**Local:** http://localhost:3000/api-docs
+
+**Production:** https://pitz-products-challenge-production.up.railway.app/api-docs
 
 Regenerate the OpenAPI file after API contract changes:
 
@@ -479,8 +553,68 @@ cd backend
 bundle exec rails rswag:specs:swaggerize
 ```
 
-The OpenAPI file is generated from integration specs in:
-`backend/spec/integration/api/v1/products_spec.rb`.
+Documented Product operations:
+
+| Method | Path |
+|--------|------|
+| `GET` | `/api/v1/products` |
+| `GET` | `/api/v1/products/{id}` |
+| `POST` | `/api/v1/products` |
+| `PUT` | `/api/v1/products/{id}` |
+| `DELETE` | `/api/v1/products/{id}` |
+
+The OpenAPI document includes request/response schemas, list query parameters
+(`page`, `search`, `active`), and relevant success/error responses
+(for example `200` / `201` / `204`, `400`, `404`, `422`).
+
+Behavioral RSpec request tests remain the primary API behavior suite. rswag
+specs own the published contract surface.
+
+## Deployment
+
+Production runs on **Railway** as three collaborating services: frontend,
+Rails API, and PostgreSQL.
+
+### What lives in the repository
+
+**Frontend**
+
+- Service root: `frontend/`
+- Build artifact: `frontend/Dockerfile`
+  - multi-stage Node build (`npm ci` → `npm run build`)
+  - `VITE_API_BASE_URL` accepted as a Docker `ARG` / `ENV` at build time
+  - static `dist/` served with `serve` on `tcp://0.0.0.0:$PORT`
+- Production is a Vite static build, not the Vite dev server
+
+**Backend**
+
+- Service root: `backend/`
+- Standard Rails API process
+- PostgreSQL via `DATABASE_URL` (Rails / Active Record)
+- Health endpoint: `GET /up` (production request logging silenced via `config.silence_healthcheck_path`)
+- CORS origin from `FRONTEND_ORIGIN`
+
+There is **no** `docker-compose.yml`, `railway.toml`, or GitHub Actions workflow
+in this repository. Platform wiring (service linking, public domains, secrets,
+and release/start commands) is configured in Railway.
+
+### Database operations
+
+On the Rails service / one-off shell:
+
+```bash
+bin/rails db:prepare
+bin/rails db:seed
+```
+
+`db:prepare` creates/migrates as needed. Seeds are optional after the first
+schema setup.
+
+### Distinction
+
+A Dockerfile used for the Railway frontend build is **not** the same as a full
+Docker Compose local development environment. Local Compose onboarding remains
+future work (see below).
 
 ## Security / Reliability Notes
 
@@ -494,29 +628,89 @@ The OpenAPI file is generated from integration specs in:
 This is appropriate hardening for the assessment scope, not a claim of
 production security certification.
 
-## Future Improvements
-
-High-value next steps if the project continued:
-
-- Bundle code-splitting after measuring real load cost
-- GitHub Actions running `backend/bin/ci` and `frontend npm run check`
-- Docker / Docker Compose for reproducible local review
-- Deployment of API and SPA
-- OpenAPI/Swagger documentation generated from the live contract
-- Optional PostgreSQL `CHECK` constraints for numeric bounds
-- `pg_trgm` (or similar) if search volume justifies it
-- Richer browser-level E2E coverage
-- Structured logging/observability for production operations
-
-Soft deletes and change auditing are not listed as default next steps;
-they should follow an explicit business requirement.
-
 ## Assessment Scope / Bonus Work
 
 Beyond the mandatory CRUD application, this repository also includes:
 
-- Frontend automated tests (Vitest, Testing Library, MSW)
+- Frontend automated testing with Vitest, Testing Library, and MSW
 - TanStack Query for server-state management
+- OpenAPI / Swagger API documentation (rswag)
+- Functional Railway deployment of the frontend and Rails API with PostgreSQL connectivity
+
+Not included in this delivery: CI/CD pipelines, Docker Compose for local
+development, soft deletes, or change auditing.
+
+## What I Would Improve With More Time
+
+Given more time, I would prioritize **reliability and operational maturity**
+before adding new Product-domain features.
+
+### 1. CI/CD automation
+
+Add GitHub Actions that run:
+
+- Backend: `backend/bin/ci`
+- Frontend: `npm run check` (from `frontend/`)
+
+Intended flow:
+
+```text
+pull request / push
+  → backend + frontend quality gates
+  → build
+  → deploy only after successful verification
+```
+
+Deployment already works on Railway; automated CI/CD would make releases more
+repeatable and safer.
+
+### 2. Browser-level E2E testing
+
+Add a small Playwright or Cypress suite for the critical production journey:
+
+- list Products
+- search / filter
+- Create
+- Edit
+- Delete
+
+Current frontend tests (Vitest + Testing Library + MSW) remain valuable for
+fast, focused coverage. E2E would additionally validate the fully integrated
+browser → frontend → Rails → PostgreSQL path.
+
+### 3. Observability / production operations
+
+Once real traffic exists:
+
+- structured logging
+- error tracking (for example Sentry)
+- request/error monitoring
+- basic metrics and alerts
+
+### 4. Database hardening and performance (measurement-driven)
+
+- PostgreSQL `CHECK` constraints for numeric invariants where useful
+- query/index analysis with `EXPLAIN` under realistic data volumes
+- `pg_trgm` + GIN/GiST for `%term%` Product-name search **only if** measured
+  `ILIKE` cost justifies it
+
+`pg_trgm` is not assumed necessary for the current dataset.
+
+### 5. Bundle / performance optimization (measurement-driven)
+
+The Vite build already emits a chunk-size advisory. I would only introduce
+code splitting or lazy loading after bundle analysis shows a measurable
+benefit, for example if the application grows enough that the current main
+chunk becomes a real load-cost problem.
+
+### 6. Reproducible local infrastructure
+
+Docker Compose for Rails + PostgreSQL + frontend would improve consistent local
+onboarding.
+
+Soft deletes, auditing, authentication, dashboards, and new Product fields
+should follow an explicit **business** requirement. They are not my preferred
+engineering priority without that driver.
 
 ## Reviewer Quick Start
 
@@ -538,3 +732,6 @@ npm run dev
 ```
 
 Then open http://localhost:5173 and call the API at http://localhost:3000.
+
+Live demo: https://amiable-victory-production-9f5e.up.railway.app
+Swagger: https://pitz-products-challenge-production.up.railway.app/api-docs
