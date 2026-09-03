@@ -1,6 +1,7 @@
 import {
   Button,
   Paper,
+  Stack,
   Table,
   TableBody,
   TableCell,
@@ -15,9 +16,10 @@ import { ProductStatusChip } from './ProductStatusChip'
 type ProductTableProps = {
   products: Product[]
   onEdit: (product: Product) => void
+  onDelete: (product: Product) => void
 }
 
-export function ProductTable({ products, onEdit }: ProductTableProps) {
+export function ProductTable({ products, onEdit, onDelete }: ProductTableProps) {
   return (
     <TableContainer component={Paper}>
       <Table aria-label="Products">
@@ -51,13 +53,23 @@ export function ProductTable({ products, onEdit }: ProductTableProps) {
                 <ProductStatusChip active={product.active} />
               </TableCell>
               <TableCell align="right">
-                <Button
-                  size="small"
-                  onClick={() => onEdit(product)}
-                  aria-label={`Edit ${product.name}`}
-                >
-                  Edit
-                </Button>
+                <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+                  <Button
+                    size="small"
+                    onClick={() => onEdit(product)}
+                    aria-label={`Edit ${product.name}`}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    size="small"
+                    color="error"
+                    onClick={() => onDelete(product)}
+                    aria-label={`Delete ${product.name}`}
+                  >
+                    Delete
+                  </Button>
+                </Stack>
               </TableCell>
             </TableRow>
           ))}
