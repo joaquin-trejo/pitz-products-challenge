@@ -1,4 +1,5 @@
 import {
+  Button,
   Paper,
   Table,
   TableBody,
@@ -13,9 +14,10 @@ import { ProductStatusChip } from './ProductStatusChip'
 
 type ProductTableProps = {
   products: Product[]
+  onEdit: (product: Product) => void
 }
 
-export function ProductTable({ products }: ProductTableProps) {
+export function ProductTable({ products, onEdit }: ProductTableProps) {
   return (
     <TableContainer component={Paper}>
       <Table aria-label="Products">
@@ -26,6 +28,7 @@ export function ProductTable({ products }: ProductTableProps) {
             <TableCell align="right">Price</TableCell>
             <TableCell align="right">Stock</TableCell>
             <TableCell>Status</TableCell>
+            <TableCell align="right">Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -46,6 +49,15 @@ export function ProductTable({ products }: ProductTableProps) {
               <TableCell align="right">{product.stock}</TableCell>
               <TableCell>
                 <ProductStatusChip active={product.active} />
+              </TableCell>
+              <TableCell align="right">
+                <Button
+                  size="small"
+                  onClick={() => onEdit(product)}
+                  aria-label={`Edit ${product.name}`}
+                >
+                  Edit
+                </Button>
               </TableCell>
             </TableRow>
           ))}

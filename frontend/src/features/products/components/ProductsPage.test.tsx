@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import userEvent from '@testing-library/user-event'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { server } from '../../../test/msw/server'
 import { renderWithProviders } from '../../../test/render-with-providers'
 import { stubMatchMedia } from '../../../test/match-media'
@@ -386,5 +386,112 @@ describe('ProductsPage', () => {
     expect(screen.queryByRole('table', { name: 'Products' })).not.toBeInTheDocument()
     expect(screen.getByLabelText('Status: Active')).toBeInTheDocument()
     expect(screen.getByText(/SKU: MOUSE-001/)).toBeInTheDocument()
+  })
+
+  it('opens Create Product from the page header', async () => {
+    const user = userEvent.setup()
+    mockIndex(() => HttpResponse.json(buildResponse([buildProduct()])))
+
+    renderWithProviders(<ProductsPage />)
+    expect(await screen.findByText('Wireless Mouse')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Create Product' }))
+    expect(await screen.findByRole('heading', { name: 'Create Product' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Active')).toBeChecked()
+  })
+
+  it('opens Edit from the Product table action', async () => {
+    const user = userEvent.setup()
+    mockIndex(() => HttpResponse.json(buildResponse([buildProduct()])))
+
+    renderWithProviders(<ProductsPage />)
+    expect(await screen.findByText('Wireless Mouse')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Edit Wireless Mouse' }))
+    expect(await screen.findByRole('heading', { name: 'Edit Product' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Name')).toHaveValue('Wireless Mouse')
+    expect(screen.getByLabelText('SKU')).toHaveValue('MOUSE-001')
+  })
+
+  it('shows success feedback and refreshes the Product list after Create', async () => {
+    const user = userEvent.setup()
+    let includeCreated = false
+
+    mockIndex(() => {
+      if (includeCreated) {
+        return HttpResponse.json(
+          buildResponse([
+            buildProduct({ id: 99, name: 'Brake Pad', sku: 'BRAKE-PAD-001' }),
+            buildProduct(),
+          ]),
+        )
+      }
+
+      return HttpResponse.json(buildResponse([buildProduct()]))
+    })
+
+    server.use(
+      http.post(`${API_BASE_URL}/api/v1/products`, async ({ request }) => {
+        const body = (await request.json()) as { product: { name: string; sku: string } }
+        includeCreated = true
+        return HttpResponse.json(
+          {
+            data: buildProduct({
+              id: 99,
+              name: body.product.name,
+              sku: body.product.sku,
+            }),
+          },
+          { status: 201 },
+        )
+      }),
+    )
+
+    renderWithProviders(<ProductsPage />)
+    expect(await screen.findByText('Wireless Mouse')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Create Product' }))
+    await user.type(screen.getByLabelText('Name'), 'Brake Pad')
+    await user.type(screen.getByLabelText('Price'), '45.50')
+    await user.type(screen.getByLabelText('Stock'), '8')
+    await user.type(screen.getByLabelText('SKU'), 'BRAKE-PAD-001')
+    await user.click(screen.getByRole('button', { name: 'Create' }))
+    const createConfirmation = await screen.findByRole('dialog', { name: 'Confirm Create Product' })
+    await user.click(within(createConfirmation).getByRole('button', { name: 'Create Product' }))
+
+    expect(await screen.findByText('Product created successfully.')).toBeInTheDocument()
+    expect(await screen.findByText('Brake Pad')).toBeInTheDocument()
+  })
+
+  it('shows success feedback and refreshes the Product list after Edit', async () => {
+    const user = userEvent.setup()
+    let updatedName = 'Wireless Mouse'
+
+    mockIndex(() =>
+      HttpResponse.json(buildResponse([buildProduct({ name: updatedName })])),
+    )
+
+    server.use(
+      http.put(`${API_BASE_URL}/api/v1/products/:id`, async ({ request }) => {
+        const body = (await request.json()) as { product: { name: string } }
+        updatedName = body.product.name
+        return HttpResponse.json({
+          data: buildProduct({ name: updatedName }),
+        })
+      }),
+    )
+
+    renderWithProviders(<ProductsPage />)
+    expect(await screen.findByText('Wireless Mouse')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Edit Wireless Mouse' }))
+    await user.clear(screen.getByLabelText('Name'))
+    await user.type(screen.getByLabelText('Name'), 'Pro Wireless Mouse')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    const editConfirmation = await screen.findByRole('dialog', { name: 'Confirm Save Changes' })
+    await user.click(within(editConfirmation).getByRole('button', { name: 'Save changes' }))
+
+    expect(await screen.findByText('Product updated successfully.')).toBeInTheDocument()
+    expect(await screen.findByText('Pro Wireless Mouse')).toBeInTheDocument()
   })
 })
