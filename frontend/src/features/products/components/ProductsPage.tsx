@@ -12,9 +12,11 @@ import {
   useTheme,
 } from '@mui/material'
 import { ApiError } from '../../../api/api-error'
+import { useDeleteProductMutation } from '../api/product-mutations'
 import { useProductsQuery } from '../api/product-queries'
 import type { Product, ProductStatusFilter } from '../product-types'
 import { ProductCards } from './ProductCards'
+import { ProductDeleteConfirmationDialog } from './ProductDeleteConfirmationDialog'
 import { ProductFilters } from './ProductFilters'
 import { ProductFormDialog, type ProductFormMode } from './ProductFormDialog'
 import { ProductTable } from './ProductTable'
@@ -39,15 +41,26 @@ function errorMessage(error: unknown): string {
   return 'Unable to load products.'
 }
 
+function deleteErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    return error.message
+  }
+
+  return 'Unable to delete product.'
+}
+
 export function ProductsPage() {
   const theme = useTheme()
   const isBelowMd = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true })
+  const deleteMutation = useDeleteProductMutation()
 
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<ProductStatusFilter>('all')
   const [page, setPage] = useState(1)
   const [formMode, setFormMode] = useState<ProductFormMode | null>(null)
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   useEffect(() => {
@@ -88,6 +101,37 @@ export function ProductsPage() {
 
   function handleEdit(product: Product) {
     setFormMode({ type: 'edit', product })
+  }
+
+  function handleDeleteRequest(product: Product) {
+    setDeleteError(null)
+    setProductToDelete(product)
+  }
+
+  function handleCancelDelete() {
+    if (deleteMutation.isPending) {
+      return
+    }
+
+    setProductToDelete(null)
+    setDeleteError(null)
+  }
+
+  async function handleConfirmDelete() {
+    if (!productToDelete || deleteMutation.isPending) {
+      return
+    }
+
+    setDeleteError(null)
+
+    try {
+      await deleteMutation.mutateAsync(productToDelete.id)
+      setProductToDelete(null)
+      setDeleteError(null)
+      setSuccessMessage('Product deleted successfully.')
+    } catch (error) {
+      setDeleteError(deleteErrorMessage(error))
+    }
   }
 
   const products = data?.data ?? []
@@ -179,9 +223,17 @@ export function ProductsPage() {
         {showResults ? (
           <Stack spacing={2}>
             {isBelowMd ? (
-              <ProductCards products={products} onEdit={handleEdit} />
+              <ProductCards
+                products={products}
+                onEdit={handleEdit}
+                onDelete={handleDeleteRequest}
+              />
             ) : (
-              <ProductTable products={products} onEdit={handleEdit} />
+              <ProductTable
+                products={products}
+                onEdit={handleEdit}
+                onDelete={handleDeleteRequest}
+              />
             )}
             {meta ? <ProductsPagination meta={meta} onPageChange={setPage} /> : null}
           </Stack>
@@ -193,6 +245,16 @@ export function ProductsPage() {
         mode={formMode}
         onClose={() => setFormMode(null)}
         onSuccess={(message) => setSuccessMessage(message)}
+      />
+
+      <ProductDeleteConfirmationDialog
+        product={productToDelete}
+        isDeleting={deleteMutation.isPending}
+        error={deleteError}
+        onCancel={handleCancelDelete}
+        onConfirm={() => {
+          void handleConfirmDelete()
+        }}
       />
 
       <Snackbar

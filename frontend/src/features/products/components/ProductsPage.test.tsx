@@ -494,4 +494,239 @@ describe('ProductsPage', () => {
     expect(await screen.findByText('Product updated successfully.')).toBeInTheDocument()
     expect(await screen.findByText('Pro Wireless Mouse')).toBeInTheDocument()
   })
+
+  it('opens Delete confirmation for the selected Product and cancels without DELETE', async () => {
+    const user = userEvent.setup()
+    const deleteCalls: string[] = []
+
+    mockIndex(() => HttpResponse.json(buildResponse([buildProduct()])))
+    server.use(
+      http.delete(`${API_BASE_URL}/api/v1/products/:id`, ({ request }) => {
+        deleteCalls.push(request.url)
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+
+    renderWithProviders(<ProductsPage />)
+    expect(await screen.findByText('Wireless Mouse')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Delete Wireless Mouse' }))
+    expect(await screen.findByRole('dialog', { name: 'Delete Product' })).toBeInTheDocument()
+    expect(screen.getByText(/Delete "Wireless Mouse"\?/)).toBeInTheDocument()
+
+    const confirmation = screen.getByRole('dialog', { name: 'Delete Product' })
+    await user.click(within(confirmation).getByRole('button', { name: 'Cancel' }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Delete Product' })).not.toBeInTheDocument()
+    })
+    expect(deleteCalls).toHaveLength(0)
+  })
+
+  it('deletes a Product, shows success feedback, and removes it from the list', async () => {
+    const user = userEvent.setup()
+    let deleted = false
+    const deleteCalls: string[] = []
+
+    mockIndex(() => {
+      if (deleted) {
+        return HttpResponse.json(
+          buildResponse([], { page: 1, per_page: 10, total_pages: 0, total_count: 0 }),
+        )
+      }
+
+      return HttpResponse.json(buildResponse([buildProduct()]))
+    })
+
+    server.use(
+      http.delete(`${API_BASE_URL}/api/v1/products/:id`, ({ params }) => {
+        deleteCalls.push(String(params.id))
+        deleted = true
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+
+    renderWithProviders(<ProductsPage />)
+    expect(await screen.findByText('Wireless Mouse')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Delete Wireless Mouse' }))
+    const confirmation = await screen.findByRole('dialog', { name: 'Delete Product' })
+    await user.click(within(confirmation).getByRole('button', { name: 'Delete Product' }))
+
+    expect(await screen.findByText('Product deleted successfully.')).toBeInTheDocument()
+    expect(deleteCalls).toEqual(['1'])
+    await waitFor(() => {
+      expect(screen.queryByText('Wireless Mouse')).not.toBeInTheDocument()
+      expect(screen.queryByRole('dialog', { name: 'Delete Product' })).not.toBeInTheDocument()
+    })
+  })
+
+  it('keeps Delete confirmation open after failure and succeeds on retry', async () => {
+    const user = userEvent.setup()
+    let attempts = 0
+    let deleted = false
+
+    mockIndex(() => {
+      if (deleted) {
+        return HttpResponse.json(
+          buildResponse([], { page: 1, per_page: 10, total_pages: 0, total_count: 0 }),
+        )
+      }
+
+      return HttpResponse.json(buildResponse([buildProduct()]))
+    })
+
+    server.use(
+      http.delete(`${API_BASE_URL}/api/v1/products/:id`, () => {
+        attempts += 1
+        if (attempts === 1) {
+          return HttpResponse.json(
+            {
+              error: {
+                code: 'internal_server_error',
+                message: 'Something went wrong',
+              },
+            },
+            { status: 500 },
+          )
+        }
+
+        deleted = true
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+
+    renderWithProviders(<ProductsPage />)
+    expect(await screen.findByText('Wireless Mouse')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Delete Wireless Mouse' }))
+    const confirmation = await screen.findByRole('dialog', { name: 'Delete Product' })
+    await user.click(within(confirmation).getByRole('button', { name: 'Delete Product' }))
+
+    expect(await screen.findByText('Something went wrong')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Delete Product' })).toBeInTheDocument()
+    expect(screen.getByText(/Delete "Wireless Mouse"\?/)).toBeInTheDocument()
+    expect(screen.queryByText('Product deleted successfully.')).not.toBeInTheDocument()
+
+    await user.click(within(confirmation).getByRole('button', { name: 'Delete Product' }))
+
+    expect(await screen.findByText('Product deleted successfully.')).toBeInTheDocument()
+    expect(attempts).toBe(2)
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Delete Product' })).not.toBeInTheDocument()
+    })
+  })
+
+  it('disables Delete confirmation while a delete is pending', async () => {
+    const user = userEvent.setup()
+
+    mockIndex(() => HttpResponse.json(buildResponse([buildProduct()])))
+    server.use(
+      http.delete(`${API_BASE_URL}/api/v1/products/:id`, async () => {
+        await new Promise((resolve) => {
+          window.setTimeout(resolve, 300)
+        })
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+
+    renderWithProviders(<ProductsPage />)
+    expect(await screen.findByText('Wireless Mouse')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Delete Wireless Mouse' }))
+    const confirmation = await screen.findByRole('dialog', { name: 'Delete Product' })
+    await user.click(within(confirmation).getByRole('button', { name: 'Delete Product' }))
+
+    expect(within(confirmation).getByRole('button', { name: /Deleting/ })).toBeDisabled()
+    expect(within(confirmation).getByRole('button', { name: 'Cancel' })).toBeDisabled()
+    expect(await screen.findByText('Product deleted successfully.')).toBeInTheDocument()
+  })
+
+  it('exposes Delete on Product cards below md', async () => {
+    stubMatchMedia(true)
+    mockIndex(() => HttpResponse.json(buildResponse([buildProduct()])))
+
+    renderWithProviders(<ProductsPage />)
+
+    expect(await screen.findByRole('heading', { level: 2, name: 'Wireless Mouse' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete Wireless Mouse' })).toBeInTheDocument()
+  })
+
+  it('reuses pagination recovery after deleting the last Product on the last page', async () => {
+    const user = userEvent.setup()
+    let deleted = false
+
+    mockIndex((url) => {
+      const page = Number(url.searchParams.get('page') ?? '1')
+
+      if (!deleted) {
+        if (page === 2) {
+          return HttpResponse.json(
+            buildResponse([buildProduct({ id: 11, name: 'HDMI Cable' })], {
+              page: 2,
+              per_page: 10,
+              total_pages: 2,
+              total_count: 11,
+            }),
+          )
+        }
+
+        return HttpResponse.json(
+          buildResponse([buildProduct()], {
+            page: 1,
+            per_page: 10,
+            total_pages: 2,
+            total_count: 11,
+          }),
+        )
+      }
+
+      if (page === 2) {
+        return HttpResponse.json(
+          buildResponse([], {
+            page: 2,
+            per_page: 10,
+            total_pages: 1,
+            total_count: 10,
+          }),
+        )
+      }
+
+      return HttpResponse.json(
+        buildResponse([buildProduct()], {
+          page: 1,
+          per_page: 10,
+          total_pages: 1,
+          total_count: 10,
+        }),
+      )
+    })
+
+    server.use(
+      http.delete(`${API_BASE_URL}/api/v1/products/:id`, () => {
+        deleted = true
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+
+    renderWithProviders(<ProductsPage />)
+    expect(await screen.findByText('Wireless Mouse')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Go to page 2' }))
+    expect(await screen.findByText('HDMI Cable')).toBeInTheDocument()
+    expect(lastParams().get('page')).toBe('2')
+
+    await user.click(screen.getByRole('button', { name: 'Delete HDMI Cable' }))
+    const confirmation = await screen.findByRole('dialog', { name: 'Delete Product' })
+    await user.click(within(confirmation).getByRole('button', { name: 'Delete Product' }))
+
+    expect(await screen.findByText('Product deleted successfully.')).toBeInTheDocument()
+    expect(await screen.findByText('Wireless Mouse')).toBeInTheDocument()
+    expect(screen.queryByText('HDMI Cable')).not.toBeInTheDocument()
+    expect(screen.queryByText('No products yet.')).not.toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(lastParams().get('page')).toBe('1')
+    })
+  })
 })
