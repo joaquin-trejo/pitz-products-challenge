@@ -1,0 +1,292 @@
+---
+openapi: 3.0.1
+info:
+  title: PITZ Products API
+  version: v1
+  description: REST API for Product catalog management.
+servers:
+- url: http://localhost:3000
+paths:
+  "/api/v1/products":
+    get:
+      summary: List Products
+      tags:
+      - Products
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+        required: false
+      - name: search
+        in: query
+        schema:
+          type: string
+          example: mouse
+        required: false
+      - name: active
+        in: query
+        schema:
+          type: boolean
+          example: true
+        required: false
+      responses:
+        '200':
+          description: products listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/products_collection_response"
+        '400':
+          description: invalid query params
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error_response"
+    post:
+      summary: Create Product
+      tags:
+      - Products
+      parameters: []
+      responses:
+        '201':
+          description: product created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/single_product_response"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_error_response"
+        '400':
+          description: invalid body shape
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error_response"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - product
+              properties:
+                product:
+                  "$ref": "#/components/schemas/product_input"
+              example:
+                product:
+                  name: Brake Pad
+                  description: Front brake pad
+                  price: '45.50'
+                  stock: 8
+                  sku: BRAKE-PAD-001
+                  active: true
+  "/api/v1/products/{id}":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      required: true
+    get:
+      summary: Show Product
+      tags:
+      - Products
+      responses:
+        '200':
+          description: product found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/single_product_response"
+        '404':
+          description: product not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error_response"
+    put:
+      summary: Update Product
+      tags:
+      - Products
+      parameters: []
+      responses:
+        '200':
+          description: product updated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/single_product_response"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_error_response"
+        '404':
+          description: product not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error_response"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - product
+              properties:
+                product:
+                  "$ref": "#/components/schemas/product_input"
+              example:
+                product:
+                  name: Updated Name
+                  description:
+                  price: '12.50'
+                  stock: 10
+                  sku: UPDATE-01
+                  active: false
+    delete:
+      summary: Delete Product
+      tags:
+      - Products
+      responses:
+        '204':
+          description: product deleted
+        '404':
+          description: product not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error_response"
+components:
+  schemas:
+    product:
+      type: object
+      required:
+      - id
+      - name
+      - price
+      - stock
+      - sku
+      - active
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        price:
+          type: string
+        stock:
+          type: integer
+        sku:
+          type: string
+        active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    product_input:
+      type: object
+      required:
+      - name
+      - price
+      - stock
+      - sku
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 100
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+        price:
+          type: string
+        stock:
+          type: integer
+          minimum: 0
+        sku:
+          type: string
+          pattern: "^[A-Z0-9-]+$"
+        active:
+          type: boolean
+    products_pagination_meta:
+      type: object
+      required:
+      - page
+      - per_page
+      - total_pages
+      - total_count
+      properties:
+        page:
+          type: integer
+        per_page:
+          type: integer
+        total_pages:
+          type: integer
+        total_count:
+          type: integer
+    products_collection_response:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          items:
+            "$ref": "#/components/schemas/product"
+        meta:
+          "$ref": "#/components/schemas/products_pagination_meta"
+    single_product_response:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          "$ref": "#/components/schemas/product"
+    error_detail:
+      type: object
+      required:
+      - code
+      - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    error_response:
+      type: object
+      required:
+      - error
+      properties:
+        error:
+          "$ref": "#/components/schemas/error_detail"
+    validation_error_response:
+      type: object
+      required:
+      - errors
+      properties:
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
