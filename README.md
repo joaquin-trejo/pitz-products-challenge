@@ -465,6 +465,23 @@ not mocked.
 
 There is no browser E2E automation suite in this repository.
 
+## API Documentation (Swagger/OpenAPI)
+
+This project includes OpenAPI documentation for the Rails API using rswag.
+
+- Swagger UI: `http://localhost:3000/api-docs`
+- Generated spec file: `backend/swagger/v1/swagger.yaml`
+
+Regenerate the OpenAPI file after API contract changes:
+
+```bash
+cd backend
+bundle exec rails rswag:specs:swaggerize
+```
+
+The OpenAPI file is generated from integration specs in:
+`backend/spec/integration/api/v1/products_spec.rb`.
+
 ## Security / Reliability Notes
 
 - Environment secrets are not committed (`.env`, `master.key` ignored)
