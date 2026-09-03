@@ -127,7 +127,7 @@ describe('ProductFormDialog', () => {
     expect(screen.getByLabelText('Price')).toHaveValue('')
     expect(screen.getByLabelText('Stock')).toHaveValue('')
     expect(screen.getByLabelText('SKU')).toHaveValue('')
-    expect(screen.getByLabelText('Active')).toBeChecked()
+    expect(screen.getByRole('switch', { name: /Product Active/i })).toBeChecked()
   })
 
   it('initializes Edit from the existing Product', async () => {
@@ -148,7 +148,7 @@ describe('ProductFormDialog', () => {
     expect(screen.getByLabelText('Price')).toHaveValue('29.99')
     expect(screen.getByLabelText('Stock')).toHaveValue('3')
     expect(screen.getByLabelText('SKU')).toHaveValue('MOUSE-001')
-    expect(screen.getByLabelText('Active')).not.toBeChecked()
+    expect(screen.getByRole('switch', { name: /Product Active/i })).not.toBeChecked()
   })
 
   it('blocks invalid submission without opening confirmation or calling the API', async () => {
@@ -163,7 +163,7 @@ describe('ProductFormDialog', () => {
 
     expect(await screen.findByText('Name is required')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Create Product', hidden: false })).toBeTruthy()
-    expect(screen.queryByText('Create this product?')).not.toBeInTheDocument()
+    expect(screen.queryByText('Create "Brake Pad"?')).not.toBeInTheDocument()
     expect(recordedMethods).toHaveLength(0)
   })
 
@@ -182,7 +182,7 @@ describe('ProductFormDialog', () => {
       await screen.findByText('SKU must use uppercase letters, numbers, and hyphens only'),
     ).toBeInTheDocument()
     expect(screen.getByLabelText('SKU')).toHaveValue('brake-pad-001')
-    expect(screen.queryByText('Create this product?')).not.toBeInTheDocument()
+    expect(screen.queryByText('Create "Brake Pad"?')).not.toBeInTheDocument()
     expect(recordedMethods).toHaveLength(0)
   })
 
@@ -197,7 +197,7 @@ describe('ProductFormDialog', () => {
     await fillValidCreateForm(user)
     await user.click(screen.getByRole('button', { name: 'Create' }))
 
-    expect(await screen.findByText('Create this product?')).toBeInTheDocument()
+    expect(await screen.findByText('Create "Brake Pad"?')).toBeInTheDocument()
     expect(recordedMethods).toHaveLength(0)
 
     const confirmation = screen.getByRole('dialog', { name: 'Confirm Create Product' })
@@ -220,9 +220,9 @@ describe('ProductFormDialog', () => {
     )
 
     await fillValidCreateForm(user, { description: '   ' })
-    await user.click(screen.getByLabelText('Active'))
+    await user.click(screen.getByRole('switch', { name: /Product Active/i }))
     await user.click(screen.getByRole('button', { name: 'Create' }))
-    expect(await screen.findByText('Create this product?')).toBeInTheDocument()
+    expect(await screen.findByText('Create "Brake Pad"?')).toBeInTheDocument()
 
     const confirmation = await screen.findByRole('dialog', { name: 'Confirm Create Product' })
     await user.click(within(confirmation).getByRole('button', { name: 'Create Product' }))
@@ -284,7 +284,7 @@ describe('ProductFormDialog', () => {
     await user.clear(screen.getByLabelText('Name'))
     await user.type(screen.getByLabelText('Name'), 'Updated Mouse')
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
-    expect(await screen.findByText('Save changes to this product?')).toBeInTheDocument()
+    expect(await screen.findByText('Save changes to "Updated Mouse"?')).toBeInTheDocument()
 
     const confirmation = screen.getByRole('dialog', { name: 'Confirm Save Changes' })
     await user.click(within(confirmation).getByRole('button', { name: 'Save changes' }))
@@ -381,11 +381,12 @@ describe('ProductFormDialog', () => {
     await user.click(within(confirmation).getByRole('button', { name: 'Create Product' }))
 
     expect(await screen.findByText('is invalid')).toBeInTheDocument()
-    expect(screen.getByLabelText('Active')).toBeInTheDocument()
-    expect(screen.getByLabelText('Name')).toHaveValue('Brake Pad')
     await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: 'Confirm Create Product' })).not.toBeInTheDocument()
     })
+    const formDialog = screen.getByRole('dialog', { name: 'Create Product' })
+    expect(within(formDialog).getByRole('switch', { name: /Product Active/i })).toBeInTheDocument()
+    expect(screen.getByLabelText('Name')).toHaveValue('Brake Pad')
     expect(onSuccess).not.toHaveBeenCalled()
     expect(onClose).not.toHaveBeenCalled()
   })

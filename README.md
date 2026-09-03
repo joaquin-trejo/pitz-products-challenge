@@ -481,7 +481,6 @@ production security certification.
 
 High-value next steps if the project continued:
 
-- Visual/UI polish beyond the current functional Material UI layout
 - Bundle code-splitting after measuring real load cost
 - GitHub Actions running `backend/bin/ci` and `frontend npm run check`
 - Docker / Docker Compose for reproducible local review

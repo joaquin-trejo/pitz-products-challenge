@@ -1,4 +1,4 @@
-import { Pagination, Stack, Typography } from '@mui/material'
+import { Pagination, Paper, Stack, Typography } from '@mui/material'
 import type { ProductsMeta } from '../product-types'
 
 type ProductsPaginationProps = {
@@ -17,25 +17,38 @@ export function ProductsPagination({ meta, onPageChange }: ProductsPaginationPro
   const end = Math.min(page * per_page, total_count)
 
   return (
-    <Stack
-      direction={{ xs: 'column', sm: 'row' }}
-      spacing={2}
+    <Paper
+      elevation={0}
       sx={{
-        alignItems: { xs: 'flex-start', sm: 'center' },
-        justifyContent: 'space-between',
+        px: 2,
+        py: 1.5,
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: 1,
+        bgcolor: 'background.paper',
       }}
     >
-      <Typography color="text.secondary">
-        Showing {start}–{end} of {total_count}
-      </Typography>
-      <Pagination
-        page={page}
-        count={total_pages}
-        onChange={(_event, nextPage) => onPageChange(nextPage)}
-        aria-label="Product pagination"
-        color="primary"
-        shape="rounded"
-      />
-    </Stack>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={2}
+        sx={{
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          justifyContent: 'space-between',
+        }}
+      >
+        <Typography variant="body2" color="text.secondary">
+          Showing {start}–{end} of {total_count}
+        </Typography>
+        <Pagination
+          page={page}
+          count={total_pages}
+          onChange={(_event, nextPage) => onPageChange(nextPage)}
+          aria-label="Product pagination"
+          color="primary"
+          shape="rounded"
+          size="small"
+        />
+      </Stack>
+    </Paper>
   )
 }

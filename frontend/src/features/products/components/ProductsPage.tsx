@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import AddIcon from '@mui/icons-material/Add'
 import {
   Alert,
   Box,
   Button,
   Container,
   LinearProgress,
+  Paper,
   Snackbar,
   Stack,
   Typography,
@@ -164,17 +166,24 @@ export function ProductsPage() {
           sx={{
             alignItems: { xs: 'stretch', sm: 'flex-start' },
             justifyContent: 'space-between',
+            gap: 1,
           }}
         >
-          <Box>
+          <Box sx={{ minWidth: 0 }}>
             <Typography component="h1" variant="h1">
               Products
             </Typography>
-            <Typography color="text.secondary" sx={{ mt: 1 }}>
+            <Typography color="text.secondary" sx={{ mt: 0.75, maxWidth: 40 * 8 }}>
               Search, filter, and browse catalog products.
             </Typography>
           </Box>
-          <Button variant="contained" onClick={() => setFormMode({ type: 'create' })}>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={() => setFormMode({ type: 'create' })}
+            sx={{ alignSelf: { xs: 'stretch', sm: 'flex-start' }, flexShrink: 0 }}
+          >
             Create Product
           </Button>
         </Stack>
@@ -191,33 +200,69 @@ export function ProductsPage() {
         {isPending ? <ProductsLoading isBelowMd={isBelowMd} /> : null}
 
         {isError ? (
-          <Alert
-            severity="error"
-            action={
-              <Button color="inherit" onClick={() => refetch()}>
-                Retry
-              </Button>
-            }
+          <Paper
+            elevation={0}
+            sx={{
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: 1,
+              overflow: 'hidden',
+            }}
           >
-            {errorMessage(error)}
-          </Alert>
+            <Alert
+              severity="error"
+              variant="outlined"
+              sx={{ border: 0, borderRadius: 0 }}
+              action={
+                <Button color="inherit" onClick={() => refetch()}>
+                  Retry
+                </Button>
+              }
+            >
+              {errorMessage(error)}
+            </Alert>
+          </Paper>
         ) : null}
 
         {showEmptyDatabase ? (
-          <Alert severity="info">No products yet.</Alert>
+          <Paper
+            elevation={0}
+            sx={{
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: 1,
+              overflow: 'hidden',
+            }}
+          >
+            <Alert severity="info" variant="outlined" sx={{ border: 0, borderRadius: 0 }}>
+              No products yet.
+            </Alert>
+          </Paper>
         ) : null}
 
         {showFilteredEmpty ? (
-          <Alert
-            severity="info"
-            action={
-              <Button color="inherit" onClick={handleClearFilters}>
-                Clear filters
-              </Button>
-            }
+          <Paper
+            elevation={0}
+            sx={{
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: 1,
+              overflow: 'hidden',
+            }}
           >
-            No products match your current search or filter.
-          </Alert>
+            <Alert
+              severity="info"
+              variant="outlined"
+              sx={{ border: 0, borderRadius: 0 }}
+              action={
+                <Button color="inherit" onClick={handleClearFilters}>
+                  Clear filters
+                </Button>
+              }
+            >
+              No products match your current search or filter.
+            </Alert>
+          </Paper>
         ) : null}
 
         {showResults ? (

@@ -385,7 +385,8 @@ describe('ProductsPage', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'Wireless Mouse' })).toBeInTheDocument()
     expect(screen.queryByRole('table', { name: 'Products' })).not.toBeInTheDocument()
     expect(screen.getByLabelText('Status: Active')).toBeInTheDocument()
-    expect(screen.getByText(/SKU: MOUSE-001/)).toBeInTheDocument()
+    expect(screen.getByText('SKU')).toBeInTheDocument()
+    expect(screen.getByText('MOUSE-001')).toBeInTheDocument()
   })
 
   it('opens Create Product from the page header', async () => {
@@ -397,7 +398,7 @@ describe('ProductsPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Create Product' }))
     expect(await screen.findByRole('heading', { name: 'Create Product' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Active')).toBeChecked()
+    expect(screen.getByRole('switch', { name: /Product Active/i })).toBeChecked()
   })
 
   it('opens Edit from the Product table action', async () => {
