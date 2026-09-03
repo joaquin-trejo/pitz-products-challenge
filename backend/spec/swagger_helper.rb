@@ -24,7 +24,7 @@ RSpec.configure do |config|
       },
       servers: [
         {
-          url: ENV.fetch('OPENAPI_SERVER_URL', 'http://localhost:3000')
+          url: ENV.fetch('OPENAPI_SERVER_URL', '/')
         }
       ],
       paths: {},
