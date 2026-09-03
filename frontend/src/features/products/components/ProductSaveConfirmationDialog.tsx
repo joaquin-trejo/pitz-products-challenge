@@ -6,11 +6,13 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  Divider,
 } from '@mui/material'
 
 type ProductSaveConfirmationDialogProps = {
   open: boolean
   mode: 'create' | 'edit'
+  productName: string
   isSubmitting: boolean
   onCancel: () => void
   onConfirm: () => void
@@ -19,6 +21,7 @@ type ProductSaveConfirmationDialogProps = {
 export function ProductSaveConfirmationDialog({
   open,
   mode,
+  productName,
   isSubmitting,
   onCancel,
   onConfirm,
@@ -32,17 +35,26 @@ export function ProductSaveConfirmationDialog({
       aria-labelledby="product-save-confirmation-title"
       aria-describedby="product-save-confirmation-description"
     >
-      <DialogTitle id="product-save-confirmation-title">
+      <DialogTitle id="product-save-confirmation-title" sx={{ pb: 1.5 }}>
         {isCreate ? 'Confirm Create Product' : 'Confirm Save Changes'}
       </DialogTitle>
-      <DialogContent>
+      <Divider />
+      <DialogContent sx={{ pt: 2.5 }}>
         <DialogContentText id="product-save-confirmation-description">
           {isCreate
-            ? 'Create this product?'
-            : 'Save changes to this product?'}
+            ? `Create "${productName}"?`
+            : `Save changes to "${productName}"?`}
         </DialogContentText>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2, gap: 1, flexWrap: 'wrap' }}>
+      <Divider />
+      <DialogActions
+        sx={{
+          px: 3,
+          py: 2,
+          gap: 1,
+          flexWrap: 'wrap',
+        }}
+      >
         <Button onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>

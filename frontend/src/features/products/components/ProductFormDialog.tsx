@@ -3,19 +3,20 @@ import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Alert,
+  Box,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   FormControl,
   FormControlLabel,
   FormHelperText,
   Stack,
   Switch,
   TextField,
-  useMediaQuery,
-  useTheme,
+  Typography,
 } from '@mui/material'
 import { ApiError } from '../../../api/api-error'
 import { useCreateProductMutation, useUpdateProductMutation } from '../api/product-mutations'
@@ -42,8 +43,6 @@ type ProductFormDialogProps = {
 }
 
 export function ProductFormDialog({ open, mode, onClose, onSuccess }: ProductFormDialogProps) {
-  const theme = useTheme()
-  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'))
   const createMutation = useCreateProductMutation()
   const updateMutation = useUpdateProductMutation()
 
@@ -196,18 +195,30 @@ export function ProductFormDialog({ open, mode, onClose, onSuccess }: ProductFor
       <Dialog
         open={open}
         onClose={isSubmitting ? undefined : handleDialogClose}
-        fullScreen={fullScreen}
         fullWidth
-        maxWidth="sm"
+        maxWidth="md"
         aria-labelledby="product-form-dialog-title"
+        slotProps={{
+          paper: {
+            sx: {
+              m: 2,
+              width: 'calc(100% - 32px)',
+              maxHeight: 'calc(100% - 32px)',
+              display: 'flex',
+              flexDirection: 'column',
+            },
+          },
+        }}
       >
-        <DialogTitle id="product-form-dialog-title">{title}</DialogTitle>
-        <DialogContent>
+        <DialogTitle id="product-form-dialog-title" sx={{ pb: 1.5, flexShrink: 0 }}>
+          {title}
+        </DialogTitle>
+        <Divider />
+        <DialogContent sx={{ pt: 2.5, overflowY: 'auto' }}>
           <Stack
             component="form"
             id="product-form"
             spacing={2}
-            sx={{ mt: 1 }}
             onSubmit={handleSubmit(handleValidSubmit)}
             noValidate
           >
@@ -262,55 +273,59 @@ export function ProductFormDialog({ open, mode, onClose, onSuccess }: ProductFor
               )}
             />
 
-            <Controller
-              name="price"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  onChange={(event) => {
-                    field.onChange(event)
-                    if (errors.price?.type === 'server') {
-                      clearErrors('price')
-                    }
-                    if (formError) {
-                      setFormError(null)
-                    }
-                  }}
-                  label="Price"
-                  type="text"
-                  slotProps={{ htmlInput: { inputMode: 'decimal' } }}
-                  error={Boolean(errors.price)}
-                  helperText={errors.price?.message}
-                  fullWidth
-                />
-              )}
-            />
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <Controller
+                name="price"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    onChange={(event) => {
+                      field.onChange(event)
+                      if (errors.price?.type === 'server') {
+                        clearErrors('price')
+                      }
+                      if (formError) {
+                        setFormError(null)
+                      }
+                    }}
+                    label="Price"
+                    type="text"
+                    slotProps={{ htmlInput: { inputMode: 'decimal' } }}
+                    error={Boolean(errors.price)}
+                    helperText={errors.price?.message}
+                    fullWidth
+                    sx={{ flex: 1 }}
+                  />
+                )}
+              />
 
-            <Controller
-              name="stock"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  onChange={(event) => {
-                    field.onChange(event)
-                    if (errors.stock?.type === 'server') {
-                      clearErrors('stock')
-                    }
-                    if (formError) {
-                      setFormError(null)
-                    }
-                  }}
-                  label="Stock"
-                  type="text"
-                  slotProps={{ htmlInput: { inputMode: 'numeric' } }}
-                  error={Boolean(errors.stock)}
-                  helperText={errors.stock?.message}
-                  fullWidth
-                />
-              )}
-            />
+              <Controller
+                name="stock"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    onChange={(event) => {
+                      field.onChange(event)
+                      if (errors.stock?.type === 'server') {
+                        clearErrors('stock')
+                      }
+                      if (formError) {
+                        setFormError(null)
+                      }
+                    }}
+                    label="Stock"
+                    type="text"
+                    slotProps={{ htmlInput: { inputMode: 'numeric' } }}
+                    error={Boolean(errors.stock)}
+                    helperText={errors.stock?.message}
+                    fullWidth
+                    sx={{ flex: 1 }}
+                  />
+                )}
+              />
+            </Stack>
 
             <Controller
               name="sku"
@@ -339,25 +354,61 @@ export function ProductFormDialog({ open, mode, onClose, onSuccess }: ProductFor
               name="active"
               control={control}
               render={({ field }) => (
-                <FormControl error={Boolean(errors.active)}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={field.value}
-                        onChange={(_event, checked) => {
-                          field.onChange(checked)
-                          if (errors.active?.type === 'server') {
-                            clearErrors('active')
-                          }
-                          if (formError) {
-                            setFormError(null)
-                          }
-                        }}
-                        slotProps={{ input: { ref: field.ref } }}
-                      />
-                    }
-                    label="Active"
-                  />
+                <FormControl error={Boolean(errors.active)} fullWidth>
+                  <Box
+                    sx={{
+                      p: 2,
+                      border: 1,
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      bgcolor: 'background.paper',
+                    }}
+                  >
+                    <FormControlLabel
+                      labelPlacement="start"
+                      sx={{
+                        m: 0,
+                        width: '100%',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: 2,
+                      }}
+                      control={
+                        <Switch
+                          checked={field.value}
+                          onChange={(_event, checked) => {
+                            field.onChange(checked)
+                            if (errors.active?.type === 'server') {
+                              clearErrors('active')
+                            }
+                            if (formError) {
+                              setFormError(null)
+                            }
+                          }}
+                          slotProps={{ input: { ref: field.ref } }}
+                        />
+                      }
+                      label={
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography
+                            component="span"
+                            variant="subtitle2"
+                            sx={{ display: 'block', fontWeight: 600 }}
+                          >
+                            Product Active
+                          </Typography>
+                          <Typography
+                            component="span"
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ display: 'block', mt: 0.5 }}
+                          >
+                            Controls whether this product is active.
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  </Box>
                   {errors.active?.message ? (
                     <FormHelperText>{errors.active.message}</FormHelperText>
                   ) : null}
@@ -366,11 +417,13 @@ export function ProductFormDialog({ open, mode, onClose, onSuccess }: ProductFor
             />
           </Stack>
         </DialogContent>
+        <Divider />
         <DialogActions
           sx={{
             px: 3,
-            pb: 2,
+            py: 2,
             gap: 1,
+            flexShrink: 0,
             flexDirection: { xs: 'column-reverse', sm: 'row' },
             alignItems: { xs: 'stretch', sm: 'center' },
           }}
@@ -392,6 +445,7 @@ export function ProductFormDialog({ open, mode, onClose, onSuccess }: ProductFor
       <ProductSaveConfirmationDialog
         open={confirmOpen}
         mode={isEdit ? 'edit' : 'create'}
+        productName={pendingPayload?.name ?? ''}
         isSubmitting={isSubmitting}
         onCancel={handleCancelConfirmation}
         onConfirm={() => {
