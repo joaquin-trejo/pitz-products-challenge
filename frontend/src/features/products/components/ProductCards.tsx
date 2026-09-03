@@ -1,12 +1,13 @@
-import { Box, Paper, Stack, Typography } from '@mui/material'
+import { Box, Button, Paper, Stack, Typography } from '@mui/material'
 import type { Product } from '../product-types'
 import { ProductStatusChip } from './ProductStatusChip'
 
 type ProductCardsProps = {
   products: Product[]
+  onEdit: (product: Product) => void
 }
 
-export function ProductCards({ products }: ProductCardsProps) {
+export function ProductCards({ products, onEdit }: ProductCardsProps) {
   return (
     <Stack component="ul" spacing={2} sx={{ listStyle: 'none', m: 0, p: 0 }}>
       {products.map((product) => (
@@ -32,6 +33,14 @@ export function ProductCards({ products }: ProductCardsProps) {
               <Typography variant="body2">Price: {product.price}</Typography>
               <Typography variant="body2">Stock: {product.stock}</Typography>
             </Stack>
+            <Button
+              size="small"
+              sx={{ mt: 2 }}
+              onClick={() => onEdit(product)}
+              aria-label={`Edit ${product.name}`}
+            >
+              Edit
+            </Button>
           </Paper>
         </Box>
       ))}
